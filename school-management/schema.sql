@@ -3,6 +3,22 @@ CREATE TABLE IF NOT EXISTS subjects (
     name VARCHAR(100) NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS teachers (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    email VARCHAR(100) NOT NULL,
+    subject VARCHAR(100) NOT NULL,
+    profile_picture VARCHAR(255)
+);
+
+CREATE TABLE IF NOT EXISTS classes (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    class_name VARCHAR(100) NOT NULL,
+    teacher_id INT,
+    school_fees DECIMAL(10,2),
+    FOREIGN KEY (teacher_id) REFERENCES teachers(id)
+);
+
 CREATE TABLE IF NOT EXISTS class_subjects (
     id INT AUTO_INCREMENT PRIMARY KEY,
     class_id INT NOT NULL,
@@ -50,31 +66,6 @@ CREATE TABLE IF NOT EXISTS admins (
     username VARCHAR(100) NOT NULL,
     password VARCHAR(255) NOT NULL,
     profile_picture VARCHAR(255)
-);
-
-CREATE TABLE IF NOT EXISTS teachers (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
-    email VARCHAR(100) NOT NULL,
-    subject VARCHAR(100) NOT NULL,
-    profile_picture VARCHAR(255)
-);
-
-CREATE TABLE IF NOT EXISTS classes (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    class_name VARCHAR(100) NOT NULL,
-    teacher_id INT,
-    school_fees DECIMAL(10,2),
-    FOREIGN KEY (teacher_id) REFERENCES teachers(id)
-);
-
-CREATE TABLE IF NOT EXISTS admission_applications (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
-    email VARCHAR(100) NOT NULL,
-    age INT NOT NULL,
-    gender VARCHAR(10) NOT NULL,
-    status VARCHAR(20) DEFAULT 'Pending'
 );
 
 CREATE TABLE IF NOT EXISTS fees (
