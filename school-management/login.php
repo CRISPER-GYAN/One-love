@@ -13,7 +13,39 @@ if (empty($_SESSION['csrf_token'])) {
 $error = '';
 $success = '';
 
-// Admin account creation is disabled
+// Admin registration logic
+$show_admin_registration = false;
+// Check if admin registration is enabled in settings or if no admin exists
+$settings = $conn->query("SELECT admin_registration_visible FROM settings LIMIT 1");
+if ($settings && ($row = $settings->fetch_assoc())) {
+	$show_admin_registration = (bool)$row['admin_registration_visible'];
+}
+$admin_count = $conn->query("SELECT COUNT(*) as cnt FROM admins");
+if ($admin_count && ($row = $admin_count->fetch_assoc())) {
+	if ((int)$row['cnt'] === 0) $show_admin_registration = true;
+}
+
+if (isset($_POST['register_admin'])) {
+	$admin_id = trim($_POST['admin_id'] ?? '');
+	$email = trim($_POST['email'] ?? '');
+	$name = trim($_POST['name'] ?? '');
+	$password = $_POST['password'] ?? '';
+	$confirm = $_POST['confirm_password'] ?? '';
+	if (!$admin_id || !$email || !$name || !$password || !$confirm) {
+		$reg_error = 'All fields are required.';
+	} elseif ($password !== $confirm) {
+		$reg_error = 'Passwords do not match.';
+	} else {
+		$stmt = $conn->prepare("INSERT INTO admins (admin_id, email, name, password) VALUES (?, ?, ?, ?)");
+		$hash = password_hash($password, PASSWORD_DEFAULT);
+		$stmt->bind_param('ssss', $admin_id, $email, $name, $hash);
+		if ($stmt->execute()) {
+			$reg_success = 'Admin account created. You can now log in.';
+		} else {
+			$reg_error = 'Error creating admin: ' . htmlspecialchars($stmt->error);
+		}
+	}
+}
 
 // Handle login
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -150,7 +182,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 			<input type="password" name="password" id="password" required>
 			<button type="submit">Login</button>
 		</form>
-		<!-- Admin account creation is disabled -->
+		<?php if ($show_admin_registration): ?>
+		<div class="admin-register-box" style="margin-top:2em; background:#eaf0fa; padding:1.5em; border-radius:8px;">
+			<h2>Admin Registration</h2>
+			<?php if (!empty($reg_error)): ?><div class="error"><?= htmlspecialchars($reg_error) ?></div><?php endif; ?>
+			<?php if (!empty($reg_success)): ?><div class="success" style="color:green; margin-top:1em;"> <?= htmlspecialchars($reg_success) ?> </div><?php endif; ?>
+			<form method="post" autocomplete="off">
+				<input type="hidden" name="register_admin" value="1">
+				<label for="admin_id">Admin ID:</label>
+				<input type="text" name="admin_id" id="admin_id" required><br>
+				<label for="email">Email:</label>
+				<input type="email" name="email" id="email" required><br>
+				<label for="name">Name:</label>
+				<input type="text" name="name" id="name" required><br>
+				<label for="password">Password:</label>
+				<input type="password" name="password" id="password" required><br>
+				<label for="confirm_password">Confirm Password:</label>
+				<input type="password" name="confirm_password" id="confirm_password" required><br>
+				<button type="submit">Register Admin</button>
+			</form>
+		</div>
+		<?php endif; ?>
 	</div>
 	</body>
 	</html>
