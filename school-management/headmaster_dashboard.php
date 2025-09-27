@@ -1,14 +1,19 @@
 <?php
+// Start session before any output
 session_start();
 require 'db.php';
-if (!isset($_SESSION['user_type']) || ($_SESSION['user_type'] !== 'headmaster' && $_SESSION['user_type'] !== 'headmistress')) {
+
+// Check if user is logged in and is headmaster/headmistress
+if (!isset($_SESSION['user_type']) || !in_array($_SESSION['user_type'], ['headmaster', 'headmistress'])) {
     header('Location: login.php');
     exit();
 }
-$user_id = $_SESSION['user'];
-// Fetch school info
+$user_id = intval($_SESSION['user'] ?? 0);
+
+// Fetch school info securely
 $settings = $conn->query("SELECT * FROM settings LIMIT 1")->fetch_assoc();
-// Fetch permissions
+
+// Fetch permissions securely
 $features = [
     'report_card' => 'View/Approve Report Cards',
     'promote_students' => 'Promote/Repeat Students',
@@ -18,19 +23,27 @@ $features = [
     'admission_profile' => 'Admission Manager'
 ];
 $permissions = [];
-$res = $conn->query("SELECT feature, allowed FROM headmaster_permissions WHERE headmaster_id = $user_id");
-while ($row = $res && $res->fetch_assoc()) {
-    $permissions[$row['feature']] = $row['allowed'];
+$stmt = $conn->prepare("SELECT feature, allowed FROM headmaster_permissions WHERE headmaster_id = ?");
+if ($stmt) {
+    $stmt->bind_param('i', $user_id);
+    $stmt->execute();
+    $res = $stmt->get_result();
+    if ($res) {
+        while ($row = $res->fetch_assoc()) {
+            $permissions[$row['feature']] = $row['allowed'];
+        }
+    }
+    $stmt->close();
 }
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title><?= ($settings['headmaster_title'] ?? 'Headmaster/Headmistress') ?> Dashboard</title>
+    <title><?= htmlspecialchars($settings['headmaster_title'] ?? 'Headmaster/Headmistress') ?> Dashboard</title>
 </head>
 <body>
-    <h2><?= ($settings['headmaster_title'] ?? 'Headmaster/Headmistress') ?> Dashboard</h2>
+    <h2><?= htmlspecialchars($settings['headmaster_title'] ?? 'Headmaster/Headmistress') ?> Dashboard</h2>
     <p>Welcome, <?= htmlspecialchars($_SESSION['name'] ?? '') ?>!</p>
     <ul>
         <?php if (!isset($permissions['report_card']) || $permissions['report_card']): ?>
@@ -51,6 +64,7 @@ while ($row = $res && $res->fetch_assoc()) {
         <?php if (!isset($permissions['admission_profile']) || $permissions['admission_profile']): ?>
         <li><a href="admission_profile.php">Admission Manager</a></li>
         <?php endif; ?>
+        <li><a href="admin_attendance.php">Attendance Management</a></li>
     </ul>
     <p><a href="logout.php" class="btn">Logout</a></p>
 </body>

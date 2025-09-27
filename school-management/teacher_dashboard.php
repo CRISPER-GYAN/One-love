@@ -1,6 +1,15 @@
 <?php
+// Start session before any output
 session_start();
 require 'db.php';
+
+// Check if user is logged in and is a teacher
+if (!isset($_SESSION['user_type']) || $_SESSION['user_type'] !== 'teacher') {
+    header('Location: login.php');
+    exit();
+}
+
+// Fetch settings securely
 $settings = $conn->query("SELECT * FROM settings LIMIT 1")->fetch_assoc();
 ?>
 <!DOCTYPE html>
@@ -10,13 +19,13 @@ $settings = $conn->query("SELECT * FROM settings LIMIT 1")->fetch_assoc();
     <title>Teacher Dashboard</title>
     <link rel="stylesheet" href="style.css">
     <style>
-        body { background: <?= $settings['background_color'] ?>; color: #222; font-family: <?= $settings['font_family'] ?>; }
-        header { background: <?= $settings['primary_color'] ?>; }
+        body { background: <?= htmlspecialchars($settings['background_color'] ?? '#f4f6fb') ?>; color: #222; font-family: <?= htmlspecialchars($settings['font_family'] ?? 'Segoe UI, Arial, sans-serif') ?>; }
+        header { background: <?= htmlspecialchars($settings['primary_color'] ?? '#2a4d8f') ?>; }
         .container { background: #fff; }
-        h2 { color: <?= $settings['primary_color'] ?>; }
-        .btn, button { background: <?= $settings['button_color'] ?>; color: <?= $settings['button_text_color'] ?>; }
-        table th { background: <?= $settings['secondary_color'] ?>; color: <?= $settings['primary_color'] ?>; }
-        footer { background: <?= $settings['secondary_color'] ?>; color: <?= $settings['primary_color'] ?>; }
+        h2 { color: <?= htmlspecialchars($settings['primary_color'] ?? '#2a4d8f') ?>; }
+        .btn, button { background: <?= htmlspecialchars($settings['button_color'] ?? '#2a4d8f') ?>; color: <?= htmlspecialchars($settings['button_text_color'] ?? '#fff') ?>; }
+        table th { background: <?= htmlspecialchars($settings['secondary_color'] ?? '#eaf0fa') ?>; color: <?= htmlspecialchars($settings['primary_color'] ?? '#2a4d8f') ?>; }
+        footer { background: <?= htmlspecialchars($settings['secondary_color'] ?? '#eaf0fa') ?>; color: <?= htmlspecialchars($settings['primary_color'] ?? '#2a4d8f') ?>; }
     </style>
 </head>
 <body>
@@ -28,6 +37,7 @@ $settings = $conn->query("SELECT * FROM settings LIMIT 1")->fetch_assoc();
     <ul>
         <li><a href="teacher_upload_results.php" class="btn">Upload Student Results</a></li>
         <li><a href="teacher_assignments.php" class="btn">Give Assignment</a></li>
+        <li><a href="admin_attendance.php" class="btn">Attendance Management</a></li>
     </ul>
 </div>
 <footer>

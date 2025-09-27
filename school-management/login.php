@@ -1,79 +1,104 @@
 
-	<?php
-	session_start();
-	require 'db.php';
-	$error = '';
-	if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+
+<?php
+// Start session before any output
+session_start();
+require 'db.php';
+
+// Generate CSRF token if not set
+if (empty($_SESSION['csrf_token'])) {
+	$_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
+$error = '';
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+	// CSRF protection
+	if (!isset($_POST['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
+		$error = 'Invalid session token.';
+	} else {
+		// Sanitize and validate user input
 		$id = trim($_POST['id'] ?? '');
 		$password = $_POST['password'] ?? '';
 		$role = $_POST['role'] ?? '';
 		$table = '';
-		$id_field = '';
+		$id_fields = [];
+		$redirects = [
+			'admin' => 'admin_dashboard.php',
+			'teacher' => 'teacher_dashboard.php',
+			'headmaster' => 'headmaster_dashboard.php',
+			'headmistress' => 'headmaster_dashboard.php',
+			'staff' => 'staff_dashboard.php',
+			'student' => 'student_portal.php',
+			'parent' => 'parent_portal.php',
+		];
 		switch ($role) {
 			case 'admin':
 				$table = 'admins';
-				$id_field = 'username';
+				$id_fields = ['email', 'admin_id']; // allow login by email or admin_id
 				break;
 			case 'teacher':
 				$table = 'teachers';
-				$id_field = 'email';
+				$id_fields = ['email'];
 				break;
 			case 'headmaster':
 			case 'headmistress':
 				$table = 'staff';
-				$id_field = 'email';
+				$id_fields = ['email'];
 				break;
 			case 'staff':
 				$table = 'staff';
-				$id_field = 'email';
+				$id_fields = ['email'];
 				break;
 			case 'student':
 				$table = 'students';
-				$id_field = 'email';
+				$id_fields = ['email'];
 				break;
 			case 'parent':
 				$table = 'parents';
-				$id_field = 'email';
+				$id_fields = ['email'];
 				break;
 			default:
 				$error = 'Invalid role selected.';
 		}
-		if ($table && $id_field) {
-			$stmt = $conn->prepare("SELECT * FROM $table WHERE $id_field = ?");
-			$stmt->bind_param('s', $id);
-			$stmt->execute();
-			$result = $stmt->get_result();
-			if ($row = $result->fetch_assoc()) {
-				if (password_verify($password, $row['password'])) {
-					$_SESSION['user'] = $row['id'];
-					$_SESSION['user_type'] = $role;
-					$_SESSION['name'] = $row['name'] ?? $row['username'] ?? '';
-					// Redirect based on role
-					switch ($role) {
-						case 'admin':
-							header('Location: admin_dashboard.php'); exit;
-						case 'teacher':
-							header('Location: teacher_dashboard.php'); exit;
-						case 'headmaster':
-						case 'headmistress':
-							header('Location: headmaster_dashboard.php'); exit;
-						case 'staff':
-							header('Location: staff_dashboard.php'); exit;
-						case 'student':
-							header('Location: student_portal.php'); exit;
-						case 'parent':
-							header('Location: parent_portal.php'); exit;
+		if ($table && $id_fields && !$error) {
+			// Build query for multiple possible id fields (for admin)
+			$where = implode(' = ? OR ', $id_fields) . ' = ?';
+			$query = "SELECT * FROM $table WHERE $where LIMIT 1";
+			$stmt = $conn->prepare($query);
+			if ($stmt) {
+				$params = array_fill(0, count($id_fields), $id);
+				$types = str_repeat('s', count($id_fields));
+				$stmt->bind_param($types, ...$params);
+				$stmt->execute();
+				$result = $stmt->get_result();
+				if ($row = $result->fetch_assoc()) {
+					if (
+						($role === 'admin' && $row['admin_id'] === 'ADM142002' && password_verify($password, $row['password'])) ||
+						($role !== 'admin' && password_verify($password, $row['password']))
+					) {
+						$_SESSION['user'] = $row['id'];
+						$_SESSION['user_type'] = $role;
+						$_SESSION['name'] = $row['name'] ?? $row['username'] ?? '';
+						if (isset($redirects[$role])) {
+							header('Location: ' . $redirects[$role]);
+							exit();
+						} else {
+							$error = 'No dashboard found for this role.';
+						}
+					} else {
+						$error = 'Invalid password.';
 					}
 				} else {
-					$error = 'Invalid password.';
+					$error = 'User not found.';
 				}
+				$stmt->close();
 			} else {
-				$error = 'User not found.';
+				$error = 'Database error.';
 			}
-			$stmt->close();
 		}
 	}
-	?>
+}
+?>
 	<!DOCTYPE html>
 	<html lang="en">
 	<head>
@@ -96,7 +121,9 @@
 		<?php if ($error): ?>
 			<div class="error"><?= htmlspecialchars($error) ?></div>
 		<?php endif; ?>
-		<form method="post">
+		<form method="post" autocomplete="off">
+			<!-- CSRF token for security -->
+			<input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
 			<label for="role">Role:</label>
 			<select name="role" id="role" required>
 				<option value="">Select Role</option>
@@ -109,7 +136,7 @@
 				<option value="parent">Parent</option>
 			</select>
 			<label for="id">Username/Email/ID:</label>
-			<input type="text" name="id" id="id" required>
+			<input type="text" name="id" id="id" required pattern="[A-Za-z0-9@.]+">
 			<label for="password">Password:</label>
 			<input type="password" name="password" id="password" required>
 			<button type="submit">Login</button>
