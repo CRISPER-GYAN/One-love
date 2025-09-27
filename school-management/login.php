@@ -4,6 +4,7 @@
 // Start session before any output
 session_start();
 require 'db.php';
+require_once 'auth.php';
 
 // Generate CSRF token if not set
 if (empty($_SESSION['csrf_token'])) {
@@ -13,7 +14,8 @@ if (empty($_SESSION['csrf_token'])) {
 $error = '';
 $success = '';
 
-// Admin registration logic
+$show_admin_registration = false;
+// ...existing code...
 $show_admin_registration = false;
 // Check if admin registration is enabled in settings or if no admin exists
 $settings = $conn->query("SELECT admin_registration_visible FROM settings LIMIT 1");
@@ -36,9 +38,9 @@ if (isset($_POST['register_admin'])) {
 	} elseif ($password !== $confirm) {
 		$reg_error = 'Passwords do not match.';
 	} else {
-		$stmt = $conn->prepare("INSERT INTO admins (admin_id, email, name, password) VALUES (?, ?, ?, ?)");
-		$hash = password_hash($password, PASSWORD_DEFAULT);
-		$stmt->bind_param('ssss', $admin_id, $email, $name, $hash);
+	$stmt = $conn->prepare("INSERT INTO admins (admin_id, email, name, password) VALUES (?, ?, ?, ?)");
+	$hash = create_hashed_password($password);
+	$stmt->bind_param('ssss', $admin_id, $email, $name, $hash);
 		if ($stmt->execute()) {
 			$reg_success = 'Admin account created. You can now log in.';
 		} else {
@@ -109,10 +111,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 				$stmt->execute();
 				$result = $stmt->get_result();
 				if ($row = $result->fetch_assoc()) {
-					if (
-						($role === 'admin' && password_verify($password, $row['password'])) ||
-						($role !== 'admin' && password_verify($password, $row['password']))
-					) {
+					$verify = verify_password($password, $row['password']);
+					if ($verify === true) {
+					// Upgrade legacy hash if needed
+					if ($verify === 'upgrade') {
+						$newHash = create_hashed_password($password);
+						$update = $conn->prepare("UPDATE $table SET password=? WHERE id=?");
+						$update->bind_param('si', $newHash, $row['id']);
+						$update->execute();
+						$row['password'] = $newHash;
+					}
 						$_SESSION['user'] = $row['id'];
 						$_SESSION['user_type'] = $role;
 						$_SESSION['name'] = $row['name'] ?? $row['username'] ?? '';

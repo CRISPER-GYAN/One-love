@@ -5,7 +5,8 @@ CREATE TABLE IF NOT EXISTS admins (
     id INT AUTO_INCREMENT PRIMARY KEY,
     email VARCHAR(128) NOT NULL UNIQUE,
     admin_id VARCHAR(64) NOT NULL UNIQUE,
-    password VARCHAR(255) NOT NULL,
+    -- Store hashed password only
+    password VARCHAR(255) NOT NULL, -- hashed password
     name VARCHAR(128)
 );
 
@@ -14,7 +15,8 @@ CREATE TABLE IF NOT EXISTS teachers (
     id INT AUTO_INCREMENT PRIMARY KEY,
     email VARCHAR(128) NOT NULL UNIQUE,
     teacher_id VARCHAR(64) NOT NULL UNIQUE,
-    password VARCHAR(255) NOT NULL,
+    -- Store hashed password only
+    password VARCHAR(255) NOT NULL, -- hashed password
     name VARCHAR(128) NOT NULL,
     phone VARCHAR(32),
     qualification VARCHAR(128),
@@ -27,7 +29,8 @@ CREATE TABLE IF NOT EXISTS staff (
     id INT AUTO_INCREMENT PRIMARY KEY,
     email VARCHAR(128) NOT NULL UNIQUE,
     staff_id VARCHAR(64) NOT NULL UNIQUE,
-    password VARCHAR(255) NOT NULL,
+    -- Store hashed password only
+    password VARCHAR(255) NOT NULL, -- hashed password
     name VARCHAR(128) NOT NULL
 );
 
@@ -36,7 +39,8 @@ CREATE TABLE IF NOT EXISTS students (
     id INT AUTO_INCREMENT PRIMARY KEY,
     email VARCHAR(128) NOT NULL UNIQUE,
     student_id VARCHAR(64) NOT NULL UNIQUE,
-    password VARCHAR(255) NOT NULL,
+    -- Store hashed password only
+    password VARCHAR(255) NOT NULL, -- hashed password
     name VARCHAR(128) NOT NULL,
     class_id INT
 );
@@ -46,7 +50,8 @@ CREATE TABLE IF NOT EXISTS parents (
     id INT AUTO_INCREMENT PRIMARY KEY,
     email VARCHAR(128) NOT NULL UNIQUE,
     parent_id VARCHAR(64) NOT NULL UNIQUE,
-    password VARCHAR(255) NOT NULL,
+    -- Store hashed password only
+    password VARCHAR(255) NOT NULL, -- hashed password
     name VARCHAR(128) NOT NULL
 );
 
@@ -166,7 +171,8 @@ CREATE TABLE IF NOT EXISTS admins (
     id INT AUTO_INCREMENT PRIMARY KEY,
     email VARCHAR(128) NOT NULL UNIQUE,
     admin_id VARCHAR(64) NOT NULL UNIQUE,
-    password VARCHAR(255) NOT NULL,
+    -- Store hashed password only
+    password VARCHAR(255) NOT NULL, -- hashed password
     name VARCHAR(128)
 );
 

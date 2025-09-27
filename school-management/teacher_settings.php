@@ -23,14 +23,14 @@ if (isset($_POST['reset_password'])) {
     $confirm = $_POST['confirm_password'] ?? '';
     if (!$current || !$new || !$confirm) {
         $error = 'All fields are required.';
-    } elseif (!password_verify($current, $teacher['password'])) {
+    } elseif (!verify_password($current, $teacher['password'])) {
         $error = 'Current password is incorrect.';
     } elseif ($new !== $confirm) {
         $error = 'New passwords do not match.';
     } elseif (strlen($new) < 6) {
         $error = 'New password must be at least 6 characters.';
     } else {
-        $hash = password_hash($new, PASSWORD_DEFAULT);
+    $hash = create_hashed_password($new);
         $stmt = $conn->prepare('UPDATE teachers SET password=? WHERE id=?');
         $stmt->bind_param('si', $hash, $teacher_id);
         if ($stmt->execute()) {

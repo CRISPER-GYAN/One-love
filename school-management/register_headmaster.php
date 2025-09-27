@@ -1,6 +1,7 @@
 <?php
 session_start();
 require 'db.php';
+require_once 'auth.php';
 if (!isset($_SESSION['user_type']) || $_SESSION['user_type'] !== 'admin') {
     header('Location: login.php');
     exit();
@@ -8,7 +9,7 @@ if (!isset($_SESSION['user_type']) || $_SESSION['user_type'] !== 'admin') {
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $name = $_POST['name'];
     $email = $_POST['email'];
-    $password = password_hash($_POST['password'], PASSWORD_DEFAULT);
+    $password = create_hashed_password($_POST['password']);
     $role = $_POST['role']; // headmaster or headmistress
     $stmt = $conn->prepare('INSERT INTO staff (name, email, password, role) VALUES (?, ?, ?, ?)');
     $stmt->bind_param('ssss', $name, $email, $password, $role);

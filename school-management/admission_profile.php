@@ -25,7 +25,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (strlen($new_password) < 6) {
             $error = 'Password must be at least 6 characters.';
         } else {
-            $hashed = password_hash($new_password, PASSWORD_DEFAULT);
+            require_once 'auth.php';
+            $hashed = create_hashed_password($new_password);
             $stmt = $conn->prepare('UPDATE staff SET password=? WHERE email=? AND role="admission"');
             $stmt->bind_param('ss', $hashed, $email);
             if ($stmt->execute()) {

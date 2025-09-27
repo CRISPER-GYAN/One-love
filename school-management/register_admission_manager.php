@@ -1,6 +1,7 @@
 <?php
 session_start();
 require 'db.php';
+require_once 'auth.php';
 if (!isset($_SESSION['user_type']) || $_SESSION['user_type'] !== 'admin') {
     header('Location: login.php');
     exit();
@@ -10,7 +11,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email = $_POST['email'] ?? '';
     $password = $_POST['password'] ?? '';
     if ($name && $email && $password) {
-        $hashed = password_hash($password, PASSWORD_DEFAULT);
+    $hashed = create_hashed_password($password);
         $stmt = $conn->prepare('INSERT INTO staff (name, email, password, role) VALUES (?, ?, ?, "admission")');
         $stmt->bind_param('sss', $name, $email, $hashed);
         $stmt->execute();

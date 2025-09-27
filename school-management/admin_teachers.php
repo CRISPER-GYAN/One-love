@@ -1,6 +1,7 @@
 <?php
 session_start();
 require 'db.php';
+require_once 'auth.php';
 if (!isset($_SESSION['user_type']) || $_SESSION['user_type'] !== 'admin') {
     header('Location: login.php');
     exit();
@@ -8,14 +9,15 @@ if (!isset($_SESSION['user_type']) || $_SESSION['user_type'] !== 'admin') {
 // Create teacher (using Teacher ID, phone number, and qualification)
 if (isset($_POST['create_teacher'])) {
     $name = isset($_POST['name']) ? $_POST['name'] : '';
+    $email = isset($_POST['email']) ? $_POST['email'] : '';
     $teacher_id = isset($_POST['teacher_id']) ? $_POST['teacher_id'] : '';
     $phone = isset($_POST['phone']) ? $_POST['phone'] : '';
     $qualification = isset($_POST['qualification']) ? $_POST['qualification'] : '';
     $subject = isset($_POST['subject']) ? $_POST['subject'] : '';
     $password = isset($_POST['password']) ? $_POST['password'] : '';
     $error = '';
-    if ($name && $teacher_id && $phone && $qualification && $subject && $password) {
-        $hashed = password_hash($password, PASSWORD_DEFAULT);
+    if ($name && $email && $teacher_id && $phone && $qualification && $subject && $password) {
+        $hashed = create_hashed_password($password);
         // Check if all columns exist before insert
         $columnsRes = $conn->query("SHOW COLUMNS FROM teachers");
         $columns = array();
@@ -25,34 +27,38 @@ if (isset($_POST['create_teacher'])) {
         $sql = '';
         $bindTypes = '';
         $params = [];
-        if (in_array('phone', $columns) && in_array('qualification', $columns) && in_array('profile_picture', $columns)) {
-            $sql = 'INSERT INTO teachers (name, email, phone, qualification, subject, profile_picture) VALUES (?, ?, ?, ?, ?, "")';
+        if (in_array('phone', $columns) && in_array('qualification', $columns) && in_array('profile_picture', $columns) && in_array('teacher_id', $columns) && in_array('password', $columns)) {
+            $sql = 'INSERT INTO teachers (name, email, teacher_id, phone, qualification, subject, password, profile_picture) VALUES (?, ?, ?, ?, ?, ?, ?, "")';
+            $bindTypes = 'ssssssss';
+            $params = [$name, $email, $teacher_id, $phone, $qualification, $subject, $hashed];
+        } elseif (in_array('phone', $columns) && in_array('qualification', $columns) && in_array('teacher_id', $columns) && in_array('password', $columns)) {
+            $sql = 'INSERT INTO teachers (name, email, teacher_id, phone, qualification, subject, password) VALUES (?, ?, ?, ?, ?, ?, ?)';
+            $bindTypes = 'sssssss';
+            $params = [$name, $email, $teacher_id, $phone, $qualification, $subject, $hashed];
+        } elseif (in_array('phone', $columns) && in_array('teacher_id', $columns) && in_array('password', $columns)) {
+            $sql = 'INSERT INTO teachers (name, email, teacher_id, phone, subject, password) VALUES (?, ?, ?, ?, ?, ?)';
+            $bindTypes = 'ssssss';
+            $params = [$name, $email, $teacher_id, $phone, $subject, $hashed];
+        } elseif (in_array('teacher_id', $columns) && in_array('password', $columns)) {
+            $sql = 'INSERT INTO teachers (name, email, teacher_id, subject, password) VALUES (?, ?, ?, ?, ?)';
             $bindTypes = 'sssss';
-            $params = [$name, $teacher_id, $phone, $qualification, $subject];
-        } elseif (in_array('phone', $columns) && in_array('qualification', $columns)) {
-            $sql = 'INSERT INTO teachers (name, email, phone, qualification, subject) VALUES (?, ?, ?, ?, ?)';
-            $bindTypes = 'sssss';
-            $params = [$name, $teacher_id, $phone, $qualification, $subject];
-        } elseif (in_array('phone', $columns)) {
-            $sql = 'INSERT INTO teachers (name, email, phone, subject) VALUES (?, ?, ?, ?)';
-            $bindTypes = 'ssss';
-            $params = [$name, $teacher_id, $phone, $subject];
+            $params = [$name, $email, $teacher_id, $subject, $hashed];
         } else {
-            $sql = 'INSERT INTO teachers (name, email, subject) VALUES (?, ?, ?)';
-            $bindTypes = 'sss';
-            $params = [$name, $teacher_id, $subject];
+            $error = 'Teachers table missing required columns.';
         }
-        $stmt = $conn->prepare($sql);
-        if ($stmt) {
-            $stmt->bind_param($bindTypes, ...$params);
-            if ($stmt->execute()) {
-                $success = 'Teacher created.';
+        if ($sql) {
+            $stmt = $conn->prepare($sql);
+            if ($stmt) {
+                $stmt->bind_param($bindTypes, ...$params);
+                if ($stmt->execute()) {
+                    $success = 'Teacher created.';
+                } else {
+                    $error = 'Error: ' . htmlspecialchars($stmt->error);
+                }
+                $stmt->close();
             } else {
-                $error = 'Error: ' . htmlspecialchars($stmt->error);
+                $error = 'Database error: ' . htmlspecialchars($conn->error);
             }
-            $stmt->close();
-        } else {
-            $error = 'Database error: ' . htmlspecialchars($conn->error);
         }
     } else {
         $error = 'All fields are required.';
@@ -164,6 +170,9 @@ if (isset($_POST['save_teacher_edit']) && isset($_POST['teacher_id_edit'])) {
             <label>Name:
                 <input type="text" name="name" required>
             </label>
+            <label>Email:
+                <input type="email" name="email" required>
+            </label>
             <label>Teacher ID:
                 <input type="text" name="teacher_id" required>
             </label>
@@ -238,13 +247,14 @@ if (isset($_POST['save_teacher_edit']) && isset($_POST['teacher_id_edit'])) {
         <h2>All Teachers</h2>
         <table>
             <thead>
-                <tr><th>Name</th><th>Teacher ID</th><th>Phone</th><th>Qualification</th><th>Main Subject</th><th>Actions</th></tr>
+                <tr><th>Name</th><th>Email</th><th>Teacher ID</th><th>Phone</th><th>Qualification</th><th>Main Subject</th><th>Actions</th></tr>
             </thead>
             <tbody>
             <?php $teachers->data_seek(0); foreach ($teachers as $t): ?>
                 <tr>
                     <td><?= htmlspecialchars($t['name']) ?></td>
                     <td><?= htmlspecialchars($t['email']) ?></td>
+                    <td><?= htmlspecialchars($t['teacher_id'] ?? '') ?></td>
                     <td><?= htmlspecialchars($t['phone'] ?? '') ?></td>
                     <td><?= htmlspecialchars($t['qualification'] ?? '') ?></td>
                     <td><?= htmlspecialchars($t['subject']) ?></td>
