@@ -5,6 +5,34 @@ if (!isset($_SESSION['user_type']) || $_SESSION['user_type'] !== 'admin') {
     header('Location: login.php');
     exit();
 }
+$msg = '';
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['toggle_admin_registration'])) {
+    $visible = isset($_POST['admin_registration_visible']) ? 1 : 0;
+    $conn->query("UPDATE settings SET admin_registration_visible = $visible LIMIT 1");
+    $msg = 'Setting updated.';
+}
+$result = $conn->query("SELECT admin_registration_visible FROM settings LIMIT 1");
+$visible = 1;
+if ($row = $result->fetch_assoc()) {
+    $visible = (int)$row['admin_registration_visible'];
+}
+?>
+<h2>Admin Settings</h2>
+<?php if ($msg): ?><div style="color:green;"> <?= htmlspecialchars($msg) ?> </div><?php endif; ?>
+<form method="post">
+    <label>
+        <input type="checkbox" name="admin_registration_visible" value="1" <?= $visible ? 'checked' : '' ?>>
+        Allow admin account creation on login page
+    </label>
+    <button type="submit" name="toggle_admin_registration">Save</button>
+</form>
+<?php
+session_start();
+require 'db.php';
+if (!isset($_SESSION['user_type']) || $_SESSION['user_type'] !== 'admin') {
+    header('Location: login.php');
+    exit();
+}
 // Fetch current settings
 $settings = $conn->query("SELECT * FROM settings LIMIT 1")->fetch_assoc();
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {

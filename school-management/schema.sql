@@ -130,7 +130,8 @@ CREATE TABLE IF NOT EXISTS settings (
     headmaster_name VARCHAR(100),
     promotion_grade_point INT DEFAULT 200,
     finance_managers TEXT,
-    admission_managers TEXT
+    admission_managers TEXT,
+    admin_registration_visible TINYINT(1) DEFAULT 1
     ,primary_color VARCHAR(20) DEFAULT '#2a4d8f'
     ,secondary_color VARCHAR(20) DEFAULT '#eaf0fa'
     ,background_color VARCHAR(20) DEFAULT '#f4f6fb'
