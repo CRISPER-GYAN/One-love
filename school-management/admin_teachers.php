@@ -5,16 +5,16 @@ if (!isset($_SESSION['user_type']) || $_SESSION['user_type'] !== 'admin') {
     header('Location: login.php');
     exit();
 }
-// Create teacher
+// Create teacher (using Teacher ID instead of email)
 if (isset($_POST['create_teacher'])) {
     $name = $_POST['name'] ?? '';
-    $email = $_POST['email'] ?? '';
+    $teacher_id = $_POST['teacher_id'] ?? '';
     $subject = $_POST['subject'] ?? '';
     $password = $_POST['password'] ?? '';
-    if ($name && $email && $subject && $password) {
+    if ($name && $teacher_id && $subject && $password) {
         $hashed = password_hash($password, PASSWORD_DEFAULT);
         $stmt = $conn->prepare('INSERT INTO teachers (name, email, subject, profile_picture) VALUES (?, ?, ?, "")');
-        $stmt->bind_param('sss', $name, $email, $subject);
+        $stmt->bind_param('sss', $name, $teacher_id, $subject);
         $stmt->execute();
         $stmt->close();
         $success = 'Teacher created.';
@@ -53,57 +53,116 @@ $subjects = $conn->query('SELECT * FROM subjects');
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Manage Teachers</title>
+    <title>Admin - Manage Teachers</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        body { background: #f4f6fb; }
+        .container { max-width: 1000px; margin: 40px auto; background: #fff; border-radius: 12px; box-shadow: 0 2px 16px #eaf0fa; padding: 2.5em 2.5em 2em 2.5em; }
+        h1, h2 { color: #2a4d8f; }
+        .section { background: #eaf0fa; border-radius: 10px; padding: 2em 2em 1.5em 2em; margin-bottom: 2em; box-shadow: 0 1px 6px #eaf0fa; }
+        label { display: block; margin: 1.2em 0 0.5em; font-weight: 500; }
+        input, select { width: 100%; padding: 0.7em; border-radius: 6px; border: 1px solid #d1d5db; background: #f9fafb; font-size: 1rem; }
+        button { background: #2a4d8f; color: #fff; border: none; border-radius: 6px; padding: 10px 28px; font-size: 1rem; cursor: pointer; margin-top: 1.5em; }
+        button:hover { background: #18305c; }
+        .success { color: #1a7f37; background: #e6f4ea; padding: 10px; border-radius: 6px; margin-bottom: 16px; }
+        table { width: 100%; border-collapse: collapse; margin: 24px 0; background: #fff; }
+        th, td { border: 1px solid #e5e7eb; padding: 12px; text-align: left; }
+        th { background: #eaf0fa; color: #2a4d8f; }
+        .back-link { color: #2a4d8f; text-decoration: underline; font-size: 1.1em; }
+    </style>
 </head>
 <body>
-    <h2>Manage Teachers</h2>
-    <?php if (!empty($success)) echo '<p style="color:green;">'.$success.'</p>'; ?>
-    <h3>Create Teacher</h3>
-    <form method="post">
-        <input type="text" name="name" placeholder="Name" required>
-        <input type="email" name="email" placeholder="Email" required>
-        <input type="text" name="subject" placeholder="Main Subject" required>
-        <input type="password" name="password" placeholder="Password" required>
-        <button type="submit" name="create_teacher">Create Teacher</button>
-    </form>
-    <h3>Assign Teacher to Class</h3>
-    <form method="post">
-        <select name="class_id" required>
-            <option value="">Select Class</option>
-            <?php while ($row = $classes->fetch_assoc()): ?>
-            <option value="<?= $row['id'] ?>"><?= htmlspecialchars($row['class_name']) ?></option>
-            <?php endwhile; ?>
-        </select>
-        <select name="teacher_id" required>
-            <option value="">Select Teacher</option>
-            <?php foreach ($teachers as $t): ?>
-            <option value="<?= $t['id'] ?>"><?= htmlspecialchars($t['name']) ?></option>
-            <?php endforeach; ?>
-        </select>
-        <button type="submit" name="assign_class">Assign</button>
-    </form>
-    <h3>Assign Teacher to Subject for Class</h3>
-    <form method="post">
-        <select name="class_id_sub" required>
-            <option value="">Select Class</option>
-            <?php $classes->data_seek(0); while ($row = $classes->fetch_assoc()): ?>
-            <option value="<?= $row['id'] ?>"><?= htmlspecialchars($row['class_name']) ?></option>
-            <?php endwhile; ?>
-        </select>
-        <select name="subject_id_sub" required>
-            <option value="">Select Subject</option>
-            <?php while ($sub = $subjects->fetch_assoc()): ?>
-            <option value="<?= $sub['id'] ?>"><?= htmlspecialchars($sub['name']) ?></option>
-            <?php endwhile; ?>
-        </select>
-        <select name="teacher_id_sub" required>
-            <option value="">Select Teacher</option>
+<div class="container">
+    <h1>Manage Teachers</h1>
+    <?php if (!empty($success)) echo '<div class="success">'.$success.'</div>'; ?>
+    <div class="section">
+        <h2>Create Teacher</h2>
+        <form method="post">
+            <label>Name:
+                <input type="text" name="name" required>
+            </label>
+            <label>Teacher ID:
+                <input type="text" name="teacher_id" required>
+            </label>
+            <label>Main Subject:
+                <input type="text" name="subject" required>
+            </label>
+            <label>Password:
+                <input type="password" name="password" required>
+            </label>
+            <button type="submit" name="create_teacher">Create Teacher</button>
+        </form>
+    </div>
+    <div class="section">
+        <h2>Assign Teacher to Class</h2>
+        <form method="post">
+            <label>Class:
+                <select name="class_id" required>
+                    <option value="">Select Class</option>
+                    <?php $classes->data_seek(0); while ($row = $classes->fetch_assoc()): ?>
+                    <option value="<?= $row['id'] ?>"><?= htmlspecialchars($row['class_name']) ?></option>
+                    <?php endwhile; ?>
+                </select>
+            </label>
+            <label>Teacher:
+                <select name="teacher_id" required>
+                    <option value="">Select Teacher</option>
+                    <?php $teachers->data_seek(0); foreach ($teachers as $t): ?>
+                    <option value="<?= $t['id'] ?>">ID: <?= htmlspecialchars($t['email']) ?> - <?= htmlspecialchars($t['name']) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </label>
+            <button type="submit" name="assign_class">Assign</button>
+        </form>
+    </div>
+    <div class="section">
+        <h2>Assign Teacher to Subject for Class</h2>
+        <form method="post">
+            <label>Class:
+                <select name="class_id_sub" required>
+                    <option value="">Select Class</option>
+                    <?php $classes->data_seek(0); while ($row = $classes->fetch_assoc()): ?>
+                    <option value="<?= $row['id'] ?>"><?= htmlspecialchars($row['class_name']) ?></option>
+                    <?php endwhile; ?>
+                </select>
+            </label>
+            <label>Subject:
+                <select name="subject_id_sub" required>
+                    <option value="">Select Subject</option>
+                    <?php $subjects->data_seek(0); while ($sub = $subjects->fetch_assoc()): ?>
+                    <option value="<?= $sub['id'] ?>"><?= htmlspecialchars($sub['name']) ?></option>
+                    <?php endwhile; ?>
+                </select>
+            </label>
+            <label>Teacher:
+                <select name="teacher_id_sub" required>
+                    <option value="">Select Teacher</option>
+                    <?php $teachers->data_seek(0); foreach ($teachers as $t): ?>
+                    <option value="<?= $t['id'] ?>">ID: <?= htmlspecialchars($t['email']) ?> - <?= htmlspecialchars($t['name']) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </label>
+            <button type="submit" name="assign_subject_teacher">Assign</button>
+        </form>
+    </div>
+    <div class="section">
+        <h2>All Teachers</h2>
+        <table>
+            <thead>
+                <tr><th>Name</th><th>Teacher ID</th><th>Main Subject</th></tr>
+            </thead>
+            <tbody>
             <?php $teachers->data_seek(0); foreach ($teachers as $t): ?>
-            <option value="<?= $t['id'] ?>"><?= htmlspecialchars($t['name']) ?></option>
+                <tr>
+                    <td><?= htmlspecialchars($t['name']) ?></td>
+                    <td><?= htmlspecialchars($t['email']) ?></td>
+                    <td><?= htmlspecialchars($t['subject']) ?></td>
+                </tr>
             <?php endforeach; ?>
-        </select>
-        <button type="submit" name="assign_subject_teacher">Assign</button>
-    </form>
-    <p><a href="admin_dashboard.php">Back to Dashboard</a></p>
+            </tbody>
+        </table>
+    </div>
+    <a href="admin_dashboard.php" class="back-link">&larr; Back to Dashboard</a>
+</div>
 </body>
 </html>
