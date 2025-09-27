@@ -68,7 +68,8 @@ $admin_name = $_SESSION['name'] ?? 'Admin';
         <h1>Admin Dashboard</h1>
         <div>
             <span style="font-size:1.1rem;">Welcome, <?= htmlspecialchars($admin_name) ?></span>
-            <a href="logout.php" class="logout">Logout</a>
+                <a href="user_settings.php" class="logout" style="background:#2a4d8f; margin-right:12px;">Settings</a>
+                <a href="logout.php" class="logout">Logout</a>
         </div>
     </div>
 </header>

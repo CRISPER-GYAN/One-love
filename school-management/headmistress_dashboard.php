@@ -15,5 +15,6 @@ if (!isset($_SESSION['user_type']) || ($_SESSION['user_type'] !== 'headmistress'
 <body>
     <h2>Welcome to the Headmistress Dashboard</h2>
     <p>Headmistress dashboard and features coming soon.</p>
+        <p><a href="user_settings.php">Settings</a></p>
 </body>
 </html>

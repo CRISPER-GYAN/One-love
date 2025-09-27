@@ -5,25 +5,63 @@ if (!isset($_SESSION['user_type']) || $_SESSION['user_type'] !== 'admin') {
     header('Location: login.php');
     exit();
 }
-// Create teacher (using Teacher ID instead of email)
+// Create teacher (using Teacher ID, phone number, and qualification)
 if (isset($_POST['create_teacher'])) {
-    $name = $_POST['name'] ?? '';
-    $teacher_id = $_POST['teacher_id'] ?? '';
-    $subject = $_POST['subject'] ?? '';
-    $password = $_POST['password'] ?? '';
-    if ($name && $teacher_id && $subject && $password) {
+    $name = isset($_POST['name']) ? $_POST['name'] : '';
+    $teacher_id = isset($_POST['teacher_id']) ? $_POST['teacher_id'] : '';
+    $phone = isset($_POST['phone']) ? $_POST['phone'] : '';
+    $qualification = isset($_POST['qualification']) ? $_POST['qualification'] : '';
+    $subject = isset($_POST['subject']) ? $_POST['subject'] : '';
+    $password = isset($_POST['password']) ? $_POST['password'] : '';
+    $error = '';
+    if ($name && $teacher_id && $phone && $qualification && $subject && $password) {
         $hashed = password_hash($password, PASSWORD_DEFAULT);
-        $stmt = $conn->prepare('INSERT INTO teachers (name, email, subject, profile_picture) VALUES (?, ?, ?, "")');
-        $stmt->bind_param('sss', $name, $teacher_id, $subject);
-        $stmt->execute();
-        $stmt->close();
-        $success = 'Teacher created.';
+        // Check if all columns exist before insert
+        $columnsRes = $conn->query("SHOW COLUMNS FROM teachers");
+        $columns = array();
+        while ($col = $columnsRes->fetch_assoc()) {
+            $columns[] = $col['Field'];
+        }
+        $sql = '';
+        $bindTypes = '';
+        $params = [];
+        if (in_array('phone', $columns) && in_array('qualification', $columns) && in_array('profile_picture', $columns)) {
+            $sql = 'INSERT INTO teachers (name, email, phone, qualification, subject, profile_picture) VALUES (?, ?, ?, ?, ?, "")';
+            $bindTypes = 'sssss';
+            $params = [$name, $teacher_id, $phone, $qualification, $subject];
+        } elseif (in_array('phone', $columns) && in_array('qualification', $columns)) {
+            $sql = 'INSERT INTO teachers (name, email, phone, qualification, subject) VALUES (?, ?, ?, ?, ?)';
+            $bindTypes = 'sssss';
+            $params = [$name, $teacher_id, $phone, $qualification, $subject];
+        } elseif (in_array('phone', $columns)) {
+            $sql = 'INSERT INTO teachers (name, email, phone, subject) VALUES (?, ?, ?, ?)';
+            $bindTypes = 'ssss';
+            $params = [$name, $teacher_id, $phone, $subject];
+        } else {
+            $sql = 'INSERT INTO teachers (name, email, subject) VALUES (?, ?, ?)';
+            $bindTypes = 'sss';
+            $params = [$name, $teacher_id, $subject];
+        }
+        $stmt = $conn->prepare($sql);
+        if ($stmt) {
+            $stmt->bind_param($bindTypes, ...$params);
+            if ($stmt->execute()) {
+                $success = 'Teacher created.';
+            } else {
+                $error = 'Error: ' . htmlspecialchars($stmt->error);
+            }
+            $stmt->close();
+        } else {
+            $error = 'Database error: ' . htmlspecialchars($conn->error);
+        }
+    } else {
+        $error = 'All fields are required.';
     }
 }
 // Assign teacher to class
 if (isset($_POST['assign_class'])) {
-    $class_id = $_POST['class_id'] ?? '';
-    $teacher_id = $_POST['teacher_id'] ?? '';
+    $class_id = isset($_POST['class_id']) ? $_POST['class_id'] : '';
+    $teacher_id = isset($_POST['teacher_id']) ? $_POST['teacher_id'] : '';
     if ($class_id && $teacher_id) {
         $stmt = $conn->prepare('UPDATE classes SET teacher_id=? WHERE id=?');
         $stmt->bind_param('ii', $teacher_id, $class_id);
@@ -34,9 +72,9 @@ if (isset($_POST['assign_class'])) {
 }
 // Assign teacher to subject per class
 if (isset($_POST['assign_subject_teacher'])) {
-    $class_id = $_POST['class_id_sub'] ?? '';
-    $subject_id = $_POST['subject_id_sub'] ?? '';
-    $teacher_id = $_POST['teacher_id_sub'] ?? '';
+    $class_id = isset($_POST['class_id_sub']) ? $_POST['class_id_sub'] : '';
+    $subject_id = isset($_POST['subject_id_sub']) ? $_POST['subject_id_sub'] : '';
+    $teacher_id = isset($_POST['teacher_id_sub']) ? $_POST['teacher_id_sub'] : '';
     if ($class_id && $subject_id && $teacher_id) {
         $stmt = $conn->prepare('UPDATE class_subjects SET teacher_id=? WHERE class_id=? AND subject_id=?');
         $stmt->bind_param('iii', $teacher_id, $class_id, $subject_id);
@@ -48,6 +86,50 @@ if (isset($_POST['assign_subject_teacher'])) {
 $teachers = $conn->query('SELECT * FROM teachers');
 $classes = $conn->query('SELECT * FROM classes');
 $subjects = $conn->query('SELECT * FROM subjects');
+
+// Remove teacher
+if (isset($_POST['remove_teacher']) && isset($_POST['teacher_id_remove'])) {
+    $tid = intval($_POST['teacher_id_remove']);
+    $conn->query("DELETE FROM teachers WHERE id=$tid");
+    $success = 'Teacher removed.';
+    $teachers = $conn->query('SELECT * FROM teachers');
+}
+// Unassign teacher from class
+if (isset($_POST['unassign_class']) && isset($_POST['class_id_unassign'])) {
+    $cid = intval($_POST['class_id_unassign']);
+    $conn->query("UPDATE classes SET teacher_id=NULL WHERE id=$cid");
+    $success = 'Teacher unassigned from class.';
+}
+// Unassign teacher from subject/class
+if (isset($_POST['unassign_subject_teacher']) && isset($_POST['class_id_unassign_sub']) && isset($_POST['subject_id_unassign_sub'])) {
+    $cid = intval($_POST['class_id_unassign_sub']);
+    $sid = intval($_POST['subject_id_unassign_sub']);
+    $conn->query("UPDATE class_subjects SET teacher_id=NULL WHERE class_id=$cid AND subject_id=$sid");
+    $success = 'Teacher unassigned from subject/class.';
+}
+// Redirect to edit_teacher.php when Edit is clicked
+if (isset($_POST['edit_teacher']) && isset($_POST['teacher_id_edit'])) {
+    $tid = intval($_POST['teacher_id_edit']);
+    header('Location: edit_teacher.php?id=' . $tid);
+    exit();
+}
+// Save teacher edit
+if (isset($_POST['save_teacher_edit']) && isset($_POST['teacher_id_edit'])) {
+    $tid = intval($_POST['teacher_id_edit']);
+    $name = isset($_POST['edit_name']) ? $_POST['edit_name'] : '';
+    $teacher_id = isset($_POST['edit_teacher_id']) ? $_POST['edit_teacher_id'] : '';
+    $phone = isset($_POST['edit_phone']) ? $_POST['edit_phone'] : '';
+    $qualification = isset($_POST['edit_qualification']) ? $_POST['edit_qualification'] : '';
+    $subject = isset($_POST['edit_subject']) ? $_POST['edit_subject'] : '';
+    if ($name && $teacher_id && $phone && $qualification && $subject) {
+        $stmt = $conn->prepare('UPDATE teachers SET name=?, email=?, phone=?, qualification=?, subject=? WHERE id=?');
+        $stmt->bind_param('sssssi', $name, $teacher_id, $phone, $qualification, $subject, $tid);
+        $stmt->execute();
+        $stmt->close();
+        $success = 'Teacher information updated.';
+        $teachers = $conn->query('SELECT * FROM teachers');
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -75,6 +157,7 @@ $subjects = $conn->query('SELECT * FROM subjects');
 <div class="container">
     <h1>Manage Teachers</h1>
     <?php if (!empty($success)) echo '<div class="success">'.$success.'</div>'; ?>
+    <?php if (!empty($error)) echo '<div class="error">'.$error.'</div>'; ?>
     <div class="section">
         <h2>Create Teacher</h2>
         <form method="post">
@@ -83,6 +166,12 @@ $subjects = $conn->query('SELECT * FROM subjects');
             </label>
             <label>Teacher ID:
                 <input type="text" name="teacher_id" required>
+            </label>
+            <label>Phone Number:
+                <input type="text" name="phone" required pattern="[0-9+\- ]{7,15}" placeholder="e.g. +233XXXXXXXXX">
+            </label>
+            <label>Qualification:
+                <input type="text" name="qualification" required placeholder="e.g. B.Ed, M.Ed, PhD">
             </label>
             <label>Main Subject:
                 <input type="text" name="subject" required>
@@ -149,18 +238,65 @@ $subjects = $conn->query('SELECT * FROM subjects');
         <h2>All Teachers</h2>
         <table>
             <thead>
-                <tr><th>Name</th><th>Teacher ID</th><th>Main Subject</th></tr>
+                <tr><th>Name</th><th>Teacher ID</th><th>Phone</th><th>Qualification</th><th>Main Subject</th><th>Actions</th></tr>
             </thead>
             <tbody>
             <?php $teachers->data_seek(0); foreach ($teachers as $t): ?>
                 <tr>
                     <td><?= htmlspecialchars($t['name']) ?></td>
                     <td><?= htmlspecialchars($t['email']) ?></td>
+                    <td><?= htmlspecialchars($t['phone'] ?? '') ?></td>
+                    <td><?= htmlspecialchars($t['qualification'] ?? '') ?></td>
                     <td><?= htmlspecialchars($t['subject']) ?></td>
+                    <td>
+                        <a href="edit_teacher.php?id=<?= $t['id'] ?>" style="display:inline-block;"><button type="button">Edit</button></a>
+                        <a href="remove_teacher.php?id=<?= $t['id'] ?>" style="display:inline-block;"><button type="button">Remove</button></a>
+                    </td>
                 </tr>
             <?php endforeach; ?>
             </tbody>
         </table>
+        <!-- Edit teacher form moved to edit_teacher.php -->
+    </div>
+    <div class="section">
+        <h2>Unassign Teacher</h2>
+        <form method="post">
+            <label>Unassign from Class:
+                <select name="class_id_unassign">
+                    <option value="">Select Class</option>
+                    <?php $classes->data_seek(0); while ($row = $classes->fetch_assoc()): ?>
+                        <?php if ($row['teacher_id']): ?>
+                        <option value="<?= $row['id'] ?>">Class: <?= htmlspecialchars($row['class_name']) ?> (Teacher ID: <?= htmlspecialchars($row['teacher_id']) ?>)</option>
+                        <?php endif; ?>
+                    <?php endwhile; ?>
+                </select>
+            </label>
+            <button type="submit" name="unassign_class">Unassign</button>
+        </form>
+        <form method="post">
+            <label>Unassign from Subject/Class:
+                <select name="class_id_unassign_sub">
+                    <option value="">Select Class</option>
+                    <?php $class_subjects = $conn->query('SELECT * FROM class_subjects');
+                    $subjects->data_seek(0);
+                    $classes->data_seek(0);
+                    while ($cs = $class_subjects->fetch_assoc()): ?>
+                        <?php if ($cs['teacher_id']): ?>
+                        <option value="<?= $cs['class_id'] ?>|<?= $cs['subject_id'] ?>">Class: <?= htmlspecialchars($cs['class_id']) ?>, Subject: <?= htmlspecialchars($cs['subject_id']) ?> (Teacher ID: <?= htmlspecialchars($cs['teacher_id']) ?>)</option>
+                        <?php endif; ?>
+                    <?php endwhile; ?>
+                </select>
+            </label>
+            <input type="hidden" name="subject_id_unassign_sub" id="subject_id_unassign_sub">
+            <button type="submit" name="unassign_subject_teacher" onclick="
+                var sel = this.form.class_id_unassign_sub;
+                if(sel && sel.value) {
+                    var parts = sel.value.split('|');
+                    this.form.class_id_unassign_sub.value = parts[0];
+                    document.getElementById('subject_id_unassign_sub').value = parts[1];
+                }
+            ">Unassign</button>
+        </form>
     </div>
     <a href="admin_dashboard.php" class="back-link">&larr; Back to Dashboard</a>
 </div>

@@ -41,6 +41,7 @@ $student_class = $conn->query("SELECT class_id FROM students WHERE id = $student
     <ul>
         <li><a href="view_assignments.php" class="btn">View Assignments</a></li>
         <li><a href="dashboard.php" class="btn">Back to Dashboard</a></li>
+        <li><a href="user_settings.php" class="btn">Settings / Change Password</a></li>
     </ul>
 </div>
 <footer>

@@ -67,5 +67,6 @@ if ($stmt) {
         <li><a href="admin_attendance.php">Attendance Management</a></li>
     </ul>
     <p><a href="logout.php" class="btn">Logout</a></p>
+        <p><a href="user_settings.php" class="btn">Settings</a></p>
 </body>
 </html>

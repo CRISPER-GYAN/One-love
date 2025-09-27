@@ -27,6 +27,7 @@ $settings = $conn->query("SELECT * FROM settings LIMIT 1")->fetch_assoc();
     <h2>Welcome, <?= htmlspecialchars($_SESSION['name'] ?? '') ?>!</h2>
     <ul>
         <li><a href="view_assignments.php" class="btn">View Assignments</a></li>
+            <li><a href="user_settings.php" class="btn">Settings / Change Password</a></li>
     </ul>
 </div>
 <footer>

@@ -73,5 +73,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <li><a href="teacher_assignments.php">Give Assignment</a></li>
     </ul>
     <p><a href="logout.php">Logout</a></p>
+        <p><a href="user_settings.php">Settings</a> <a href="logout.php">Logout</a></p>
 </body>
 </html>

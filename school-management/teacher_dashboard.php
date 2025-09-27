@@ -38,6 +38,7 @@ $settings = $conn->query("SELECT * FROM settings LIMIT 1")->fetch_assoc();
         <li><a href="teacher_upload_results.php" class="btn">Upload Student Results</a></li>
         <li><a href="teacher_assignments.php" class="btn">Give Assignment</a></li>
         <li><a href="admin_attendance.php" class="btn">Attendance Management</a></li>
+        <li><a href="teacher_settings.php" class="btn">Teacher Settings / Reset Password</a></li>
     </ul>
 </div>
 <footer>

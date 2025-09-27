@@ -1,3 +1,249 @@
+-- SCHOOL MANAGEMENT SYSTEM SCHEMA (REVISED)
+
+-- ADMINS TABLE
+CREATE TABLE IF NOT EXISTS admins (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    email VARCHAR(128) NOT NULL UNIQUE,
+    admin_id VARCHAR(64) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    name VARCHAR(128)
+);
+
+-- TEACHERS TABLE
+CREATE TABLE IF NOT EXISTS teachers (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    email VARCHAR(128) NOT NULL UNIQUE,
+    teacher_id VARCHAR(64) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    name VARCHAR(128) NOT NULL,
+    phone VARCHAR(32),
+    qualification VARCHAR(128),
+    subject VARCHAR(128),
+    profile_picture VARCHAR(255)
+);
+
+-- STAFF TABLE
+CREATE TABLE IF NOT EXISTS staff (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    email VARCHAR(128) NOT NULL UNIQUE,
+    staff_id VARCHAR(64) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    name VARCHAR(128) NOT NULL
+);
+
+-- STUDENTS TABLE
+CREATE TABLE IF NOT EXISTS students (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    email VARCHAR(128) NOT NULL UNIQUE,
+    student_id VARCHAR(64) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    name VARCHAR(128) NOT NULL,
+    class_id INT
+);
+
+-- PARENTS TABLE
+CREATE TABLE IF NOT EXISTS parents (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    email VARCHAR(128) NOT NULL UNIQUE,
+    parent_id VARCHAR(64) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    name VARCHAR(128) NOT NULL
+);
+
+-- CLASSES TABLE
+CREATE TABLE IF NOT EXISTS classes (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    class_name VARCHAR(64) NOT NULL,
+    teacher_id INT,
+    FOREIGN KEY (teacher_id) REFERENCES teachers(id) ON DELETE SET NULL
+);
+
+-- SUBJECTS TABLE
+CREATE TABLE IF NOT EXISTS subjects (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(128) NOT NULL
+);
+
+-- CLASS SUBJECTS TABLE
+CREATE TABLE IF NOT EXISTS class_subjects (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    class_id INT NOT NULL,
+    subject_id INT NOT NULL,
+    teacher_id INT,
+    FOREIGN KEY (class_id) REFERENCES classes(id) ON DELETE CASCADE,
+    FOREIGN KEY (subject_id) REFERENCES subjects(id) ON DELETE CASCADE,
+    FOREIGN KEY (teacher_id) REFERENCES teachers(id) ON DELETE SET NULL
+);
+
+
+-- REPORT CARDS TABLE
+CREATE TABLE IF NOT EXISTS report_cards (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    student_id INT NOT NULL,
+    class_id INT NOT NULL,
+    term VARCHAR(32) NOT NULL,
+    year INT NOT NULL,
+    overall_grade VARCHAR(8),
+    comments TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,
+    FOREIGN KEY (class_id) REFERENCES classes(id) ON DELETE CASCADE
+);
+
+-- REPORT CARD SUBJECT GRADES TABLE
+CREATE TABLE IF NOT EXISTS report_card_subjects (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    report_card_id INT NOT NULL,
+    subject_id INT NOT NULL,
+    grade VARCHAR(8),
+    remarks VARCHAR(255),
+    FOREIGN KEY (report_card_id) REFERENCES report_cards(id) ON DELETE CASCADE,
+    FOREIGN KEY (subject_id) REFERENCES subjects(id) ON DELETE CASCADE
+);
+
+-- NOTIFICATIONS TABLE
+CREATE TABLE IF NOT EXISTS notifications (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    user_role ENUM('admin', 'teacher', 'staff', 'student', 'parent', 'finance') NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    message TEXT NOT NULL,
+    is_read TINYINT(1) DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- SETTINGS TABLE
+CREATE TABLE IF NOT EXISTS settings (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    admin_registration_visible TINYINT(1) DEFAULT 1,
+    school_name VARCHAR(128),
+    background_color VARCHAR(16),
+    primary_color VARCHAR(16),
+    secondary_color VARCHAR(16),
+    button_color VARCHAR(16),
+    button_text_color VARCHAR(16),
+    font_family VARCHAR(64)
+);
+-- REPORT CARDS TABLE
+CREATE TABLE IF NOT EXISTS report_cards (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    student_id INT NOT NULL,
+    class_id INT NOT NULL,
+    term VARCHAR(32) NOT NULL,
+    year INT NOT NULL,
+    overall_grade VARCHAR(8),
+    comments TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,
+    FOREIGN KEY (class_id) REFERENCES classes(id) ON DELETE CASCADE
+);
+
+-- REPORT CARD SUBJECT GRADES
+CREATE TABLE IF NOT EXISTS report_card_subjects (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    report_card_id INT NOT NULL,
+    subject_id INT NOT NULL,
+    grade VARCHAR(8),
+    remarks VARCHAR(255),
+    FOREIGN KEY (report_card_id) REFERENCES report_cards(id) ON DELETE CASCADE,
+    FOREIGN KEY (subject_id) REFERENCES subjects(id) ON DELETE CASCADE
+);
+
+-- NOTIFICATIONS TABLE
+CREATE TABLE IF NOT EXISTS notifications (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    user_role ENUM('admin', 'teacher', 'staff', 'student', 'parent', 'finance') NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    message TEXT NOT NULL,
+    is_read TINYINT(1) DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+-- Add missing columns to teachers table if not present
+
+-- USERS & AUTH TABLES
+CREATE TABLE IF NOT EXISTS admins (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    email VARCHAR(128) NOT NULL UNIQUE,
+    admin_id VARCHAR(64) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    name VARCHAR(128)
+);
+
+CREATE TABLE IF NOT EXISTS teachers (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    email VARCHAR(128) NOT NULL UNIQUE,
+    teacher_id VARCHAR(64) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    name VARCHAR(128) NOT NULL,
+    phone VARCHAR(32),
+    qualification VARCHAR(128),
+    subject VARCHAR(128),
+    profile_picture VARCHAR(255)
+);
+
+CREATE TABLE IF NOT EXISTS staff (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    email VARCHAR(128) NOT NULL UNIQUE,
+    staff_id VARCHAR(64) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    name VARCHAR(128) NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS students (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    email VARCHAR(128) NOT NULL UNIQUE,
+    student_id VARCHAR(64) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    name VARCHAR(128) NOT NULL,
+    class_id INT
+);
+
+CREATE TABLE IF NOT EXISTS parents (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    email VARCHAR(128) NOT NULL UNIQUE,
+    parent_id VARCHAR(64) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    name VARCHAR(128) NOT NULL
+);
+
+-- CLASSES, SUBJECTS, ASSIGNMENTS, ETC.
+CREATE TABLE IF NOT EXISTS classes (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    class_name VARCHAR(64) NOT NULL,
+    teacher_id INT,
+    FOREIGN KEY (teacher_id) REFERENCES teachers(id) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS subjects (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(128) NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS class_subjects (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    class_id INT NOT NULL,
+    subject_id INT NOT NULL,
+    teacher_id INT,
+    FOREIGN KEY (class_id) REFERENCES classes(id) ON DELETE CASCADE,
+    FOREIGN KEY (subject_id) REFERENCES subjects(id) ON DELETE CASCADE,
+    FOREIGN KEY (teacher_id) REFERENCES teachers(id) ON DELETE SET NULL
+);
+
+-- SETTINGS TABLE
+CREATE TABLE IF NOT EXISTS settings (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    admin_registration_visible TINYINT(1) DEFAULT 1,
+    school_name VARCHAR(128),
+    background_color VARCHAR(16),
+    primary_color VARCHAR(16),
+    secondary_color VARCHAR(16),
+    button_color VARCHAR(16),
+    button_text_color VARCHAR(16),
+    font_family VARCHAR(64)
+);
+
+-- Add other tables as needed for your features (attendance, report cards, etc.)
 CREATE TABLE IF NOT EXISTS subjects (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100) NOT NULL
