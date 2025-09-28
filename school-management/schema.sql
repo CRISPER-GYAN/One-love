@@ -383,14 +383,19 @@ CREATE TABLE IF NOT EXISTS settings (
     promotion_grade_point INT DEFAULT 200,
     finance_managers TEXT,
     admission_managers TEXT,
-    admin_registration_visible TINYINT(1) DEFAULT 1
-    ,primary_color VARCHAR(20) DEFAULT '#2a4d8f'
-    ,secondary_color VARCHAR(20) DEFAULT '#eaf0fa'
-    ,background_color VARCHAR(20) DEFAULT '#f4f6fb'
-    ,button_color VARCHAR(20) DEFAULT '#2a4d8f'
-    ,button_text_color VARCHAR(20) DEFAULT '#fff'
-    ,font_family VARCHAR(100) DEFAULT 'Segoe UI, Arial, sans-serif'
+    admin_registration_visible TINYINT(1) DEFAULT 1,
+    primary_color VARCHAR(20) DEFAULT '#2a4d8f',
+    secondary_color VARCHAR(20) DEFAULT '#eaf0fa',
+    background_color VARCHAR(20) DEFAULT '#f4f6fb',
+    button_color VARCHAR(20) DEFAULT '#2a4d8f',
+    button_text_color VARCHAR(20) DEFAULT '#fff',
+    font_family VARCHAR(100) DEFAULT 'Segoe UI, Arial, sans-serif',
+    grading_system TEXT
 );
+
+-- Insert default settings row (run once)
+INSERT INTO settings (school_name, school_logo, headmaster_name, promotion_grade_point, admin_registration_visible, primary_color, secondary_color, background_color, button_color, button_text_color, font_family)
+VALUES ('', '', '', 200, 1, '#2a4d8f', '#eaf0fa', '#f4f6fb', '#2a4d8f', '#fff', 'Segoe UI, Arial, sans-serif');
 CREATE TABLE IF NOT EXISTS headmaster_permissions (
     id INT AUTO_INCREMENT PRIMARY KEY,
     headmaster_id INT NOT NULL,

@@ -19,26 +19,35 @@ if ($row = $result->fetch_assoc()) {
     $visible = (int)$row['admin_registration_visible'];
 }
 // Fetch current settings
-$settings = $conn->query("SELECT * FROM settings LIMIT 1")->fetch_assoc();
+$settings_result = $conn->query("SELECT * FROM settings LIMIT 1");
+$settings = $settings_result ? $settings_result->fetch_assoc() : null;
 // Handle school settings update
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_school_settings'])) {
     $school_name = trim($_POST['school_name']);
     $grade_point = intval($_POST['promotion_grade_point']);
     $headmaster_name = trim($_POST['headmaster_name']);
-    $logo_path = $settings['school_logo'];
-    if (isset($_FILES['school_logo']) && $_FILES['school_logo']['error'] === UPLOAD_ERR_OK) {
+    $logo_path = ($settings && isset($settings['school_logo'])) ? $settings['school_logo'] : '';
+    // Check if 'school_logo' column exists
+    $columnsRes = $conn->query("SHOW COLUMNS FROM settings LIKE 'school_logo'");
+    $has_logo_col = $columnsRes && $columnsRes->num_rows > 0;
+    if (isset($_FILES['school_logo']) && $_FILES['school_logo']['error'] === UPLOAD_ERR_OK && $has_logo_col) {
         $ext = strtolower(pathinfo($_FILES['school_logo']['name'], PATHINFO_EXTENSION));
         if (in_array($ext, ['jpg','jpeg','png','gif'])) {
             $logo_path = 'uploads/school_logo_' . time() . '.' . $ext;
             move_uploaded_file($_FILES['school_logo']['tmp_name'], $logo_path);
         }
     }
-    $stmt = $conn->prepare('UPDATE settings SET school_name=?, school_logo=?, promotion_grade_point=?, headmaster_name=? WHERE id=1');
-    $stmt->bind_param('ssis', $school_name, $logo_path, $grade_point, $headmaster_name);
+    if ($has_logo_col) {
+        $stmt = $conn->prepare('UPDATE settings SET school_name=?, school_logo=?, promotion_grade_point=?, headmaster_name=? WHERE id=1');
+        $stmt->bind_param('ssis', $school_name, $logo_path, $grade_point, $headmaster_name);
+    } else {
+        $stmt = $conn->prepare('UPDATE settings SET school_name=?, promotion_grade_point=?, headmaster_name=? WHERE id=1');
+        $stmt->bind_param('sis', $school_name, $grade_point, $headmaster_name);
+    }
     $stmt->execute();
     $stmt->close();
-    $settings = $conn->query("SELECT * FROM settings LIMIT 1")->fetch_assoc();
-    $msg = 'School settings updated.';
+    header('Location: admin_dashboard.php?msg=School+settings+updated');
+    exit();
 }
 // Handle grading system settings
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_grading_settings'])) {
@@ -147,13 +156,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_layout_settings'
                     </tr>
                 <?php endforeach; ?>
                 <!-- Empty row for adding new grade -->
-                <tr>
+                <tr class="grading-row">
                     <td><input type="text" name="grade[]" value="" style="width:60px;"></td>
                     <td><input type="number" name="min[]" value="" min="0" max="100" style="width:70px;"></td>
                     <td><input type="number" name="max[]" value="" min="0" max="100" style="width:70px;"></td>
                     <td><input type="text" name="remark[]" value=""></td>
-                    <td></td>
+                    <td><button type="button" class="remove-row" style="background:#c00;color:#fff;padding:2px 10px;border-radius:4px;">&times;</button></td>
                 </tr>
+                </tbody>
+            </table>
+            <button type="button" id="add-grade-row" style="background:#2a4d8f;color:#fff;padding:6px 18px;border-radius:6px;margin-bottom:1em;">Add Grade Row</button>
+</form>
+<script>
+document.getElementById('add-grade-row').onclick = function() {
+    var tbody = document.getElementById('grading-rows');
+    var newRow = document.createElement('tr');
+    newRow.className = 'grading-row';
+    newRow.innerHTML = `
+        <td><input type="text" name="grade[]" value="" style="width:60px;"></td>
+        <td><input type="number" name="min[]" value="" min="0" max="100" style="width:70px;"></td>
+        <td><input type="number" name="max[]" value="" min="0" max="100" style="width:70px;"></td>
+        <td><input type="text" name="remark[]" value=""></td>
+        <td><button type="button" class="remove-row" style="background:#c00;color:#fff;padding:2px 10px;border-radius:4px;">&times;</button></td>
+    `;
+    tbody.appendChild(newRow);
+};
+document.addEventListener('click', function(e) {
+    if (e.target && e.target.classList.contains('remove-row')) {
+        var row = e.target.closest('tr');
+        if (row) row.remove();
+    }
+});
+</script>
                 </tbody>
             </table>
             <button type="submit" name="save_grading_settings">Save Grading System</button>

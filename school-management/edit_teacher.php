@@ -19,14 +19,34 @@ $teacher = null;
 // Save teacher edit
 if (isset($_POST['save_teacher_edit'])) {
     $name = isset($_POST['edit_name']) ? trim($_POST['edit_name']) : '';
+    $email = isset($_POST['edit_email']) ? trim($_POST['edit_email']) : '';
     $teacher_id = isset($_POST['edit_teacher_id']) ? trim($_POST['edit_teacher_id']) : '';
     $phone = isset($_POST['edit_phone']) ? trim($_POST['edit_phone']) : '';
     $qualification = isset($_POST['edit_qualification']) ? trim($_POST['edit_qualification']) : '';
     $subject = isset($_POST['edit_subject']) ? trim($_POST['edit_subject']) : '';
-    if ($name && $teacher_id && $phone && $qualification && $subject) {
-        $stmt = $conn->prepare('UPDATE teachers SET name=?, email=?, phone=?, qualification=?, subject=? WHERE id=?');
+    $profile_picture = $teacher['profile_picture'] ?? '';
+    // Handle profile picture upload
+    if (isset($_FILES['edit_profile_picture']) && $_FILES['edit_profile_picture']['error'] === UPLOAD_ERR_OK) {
+        $ext = strtolower(pathinfo($_FILES['edit_profile_picture']['name'], PATHINFO_EXTENSION));
+        $allowed = ['jpg', 'jpeg', 'png', 'gif'];
+        if (in_array($ext, $allowed)) {
+            $uploadDir = 'uploads/teacher_profiles/';
+            if (!is_dir($uploadDir)) mkdir($uploadDir, 0777, true);
+            $filename = uniqid('teacher_', true) . '.' . $ext;
+            $dest = $uploadDir . $filename;
+            if (move_uploaded_file($_FILES['edit_profile_picture']['tmp_name'], $dest)) {
+                $profile_picture = $dest;
+            } else {
+                $error = 'Failed to upload profile picture.';
+            }
+        } else {
+            $error = 'Invalid profile picture format.';
+        }
+    }
+    if ($name && $email && $teacher_id && $phone && $qualification && $subject && !$error) {
+        $stmt = $conn->prepare('UPDATE teachers SET name=?, email=?, teacher_id=?, phone=?, qualification=?, subject=?, profile_picture=? WHERE id=?');
         if ($stmt) {
-            $stmt->bind_param('sssssi', $name, $teacher_id, $phone, $qualification, $subject, $tid);
+            $stmt->bind_param('sssssssi', $name, $email, $teacher_id, $phone, $qualification, $subject, $profile_picture, $tid);
             if ($stmt->execute()) {
                 $success = 'Teacher information updated.';
             } else {
@@ -36,7 +56,7 @@ if (isset($_POST['save_teacher_edit'])) {
         } else {
             $error = 'Database error: ' . $conn->error;
         }
-    } else {
+    } else if (!$error) {
         $error = 'All fields are required.';
     }
 }
@@ -79,12 +99,15 @@ if (!$teacher) {
     <h1>Edit Teacher</h1>
     <?php if ($success) echo '<div class="success">'.$success.'</div>'; ?>
     <?php if ($error) echo '<div class="error">'.$error.'</div>'; ?>
-    <form method="post">
+    <form method="post" enctype="multipart/form-data">
         <label>Name:
             <input type="text" name="edit_name" value="<?= isset($teacher['name']) ? htmlspecialchars($teacher['name']) : '' ?>" required>
         </label>
+        <label>Email:
+            <input type="email" name="edit_email" value="<?= isset($teacher['email']) ? htmlspecialchars($teacher['email']) : '' ?>" required>
+        </label>
         <label>Teacher ID:
-            <input type="text" name="edit_teacher_id" value="<?= isset($teacher['email']) ? htmlspecialchars($teacher['email']) : '' ?>" required>
+            <input type="text" name="edit_teacher_id" value="<?= isset($teacher['teacher_id']) ? htmlspecialchars($teacher['teacher_id']) : '' ?>" required>
         </label>
         <label>Phone Number:
             <input type="text" name="edit_phone" value="<?= isset($teacher['phone']) ? htmlspecialchars($teacher['phone']) : '' ?>" required>
@@ -94,6 +117,12 @@ if (!$teacher) {
         </label>
         <label>Main Subject:
             <input type="text" name="edit_subject" value="<?= isset($teacher['subject']) ? htmlspecialchars($teacher['subject']) : '' ?>" required>
+        </label>
+        <label>Profile Picture:
+            <input type="file" name="edit_profile_picture" accept="image/*">
+            <?php if (!empty($teacher['profile_picture'])): ?>
+                <br><img src="<?= htmlspecialchars($teacher['profile_picture']) ?>" alt="Profile Picture" style="width:80px;height:80px;border-radius:50%;margin-top:0.5em;">
+            <?php endif; ?>
         </label>
         <button type="submit" name="save_teacher_edit">Save Changes</button>
     </form>

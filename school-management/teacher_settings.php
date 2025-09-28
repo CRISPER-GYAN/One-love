@@ -1,6 +1,7 @@
 <?php
 session_start();
 require 'db.php';
+require_once 'auth.php';
 if (!isset($_SESSION['user_type']) || $_SESSION['user_type'] !== 'teacher') {
     header('Location: login.php');
     exit();
@@ -34,11 +35,13 @@ if (isset($_POST['reset_password'])) {
         $stmt = $conn->prepare('UPDATE teachers SET password=? WHERE id=?');
         $stmt->bind_param('si', $hash, $teacher_id);
         if ($stmt->execute()) {
-            $success = 'Password updated successfully.';
+            $stmt->close();
+            header('Location: teacher_dashboard.php?password_updated=1');
+            exit();
         } else {
             $error = 'Failed to update password.';
+            $stmt->close();
         }
-        $stmt->close();
     }
 }
 ?>

@@ -15,8 +15,27 @@ if (isset($_POST['create_teacher'])) {
     $qualification = isset($_POST['qualification']) ? $_POST['qualification'] : '';
     $subject = isset($_POST['subject']) ? $_POST['subject'] : '';
     $password = isset($_POST['password']) ? $_POST['password'] : '';
+    $profile_picture = '';
     $error = '';
-    if ($name && $email && $teacher_id && $phone && $qualification && $subject && $password) {
+    // Handle profile picture upload
+    if (isset($_FILES['profile_picture']) && $_FILES['profile_picture']['error'] === UPLOAD_ERR_OK) {
+        $ext = strtolower(pathinfo($_FILES['profile_picture']['name'], PATHINFO_EXTENSION));
+        $allowed = ['jpg', 'jpeg', 'png', 'gif'];
+        if (in_array($ext, $allowed)) {
+            $uploadDir = 'uploads/teacher_profiles/';
+            if (!is_dir($uploadDir)) mkdir($uploadDir, 0777, true);
+            $filename = uniqid('teacher_', true) . '.' . $ext;
+            $dest = $uploadDir . $filename;
+            if (move_uploaded_file($_FILES['profile_picture']['tmp_name'], $dest)) {
+                $profile_picture = $dest;
+            } else {
+                $error = 'Failed to upload profile picture.';
+            }
+        } else {
+            $error = 'Invalid profile picture format.';
+        }
+    }
+    if ($name && $email && $teacher_id && $phone && $qualification && $subject && $password && !$error) {
         $hashed = create_hashed_password($password);
         // Check if all columns exist before insert
         $columnsRes = $conn->query("SHOW COLUMNS FROM teachers");
@@ -28,9 +47,9 @@ if (isset($_POST['create_teacher'])) {
         $bindTypes = '';
         $params = [];
         if (in_array('phone', $columns) && in_array('qualification', $columns) && in_array('profile_picture', $columns) && in_array('teacher_id', $columns) && in_array('password', $columns)) {
-            $sql = 'INSERT INTO teachers (name, email, teacher_id, phone, qualification, subject, password, profile_picture) VALUES (?, ?, ?, ?, ?, ?, ?, "")';
+            $sql = 'INSERT INTO teachers (name, email, teacher_id, phone, qualification, subject, password, profile_picture) VALUES (?, ?, ?, ?, ?, ?, ?, ?)';
             $bindTypes = 'ssssssss';
-            $params = [$name, $email, $teacher_id, $phone, $qualification, $subject, $hashed];
+            $params = [$name, $email, $teacher_id, $phone, $qualification, $subject, $hashed, $profile_picture];
         } elseif (in_array('phone', $columns) && in_array('qualification', $columns) && in_array('teacher_id', $columns) && in_array('password', $columns)) {
             $sql = 'INSERT INTO teachers (name, email, teacher_id, phone, qualification, subject, password) VALUES (?, ?, ?, ?, ?, ?, ?)';
             $bindTypes = 'sssssss';
@@ -60,7 +79,7 @@ if (isset($_POST['create_teacher'])) {
                 $error = 'Database error: ' . htmlspecialchars($conn->error);
             }
         }
-    } else {
+    } else if (!$error) {
         $error = 'All fields are required.';
     }
 }
@@ -166,7 +185,7 @@ if (isset($_POST['save_teacher_edit']) && isset($_POST['teacher_id_edit'])) {
     <?php if (!empty($error)) echo '<div class="error">'.$error.'</div>'; ?>
     <div class="section">
         <h2>Create Teacher</h2>
-        <form method="post">
+    <form method="post" enctype="multipart/form-data">
             <label>Name:
                 <input type="text" name="name" required>
             </label>
@@ -187,6 +206,9 @@ if (isset($_POST['save_teacher_edit']) && isset($_POST['teacher_id_edit'])) {
             </label>
             <label>Password:
                 <input type="password" name="password" required>
+            </label>
+            <label>Profile Picture:
+                <input type="file" name="profile_picture" accept="image/*">
             </label>
             <button type="submit" name="create_teacher">Create Teacher</button>
         </form>
@@ -259,6 +281,7 @@ if (isset($_POST['save_teacher_edit']) && isset($_POST['teacher_id_edit'])) {
                     <td><?= htmlspecialchars($t['qualification'] ?? '') ?></td>
                     <td><?= htmlspecialchars($t['subject']) ?></td>
                     <td>
+                        <a href="view_teacher.php?id=<?= $t['id'] ?>" style="display:inline-block;"><button type="button">View</button></a>
                         <a href="edit_teacher.php?id=<?= $t['id'] ?>" style="display:inline-block;"><button type="button">Edit</button></a>
                         <a href="remove_teacher.php?id=<?= $t['id'] ?>" style="display:inline-block;"><button type="button">Remove</button></a>
                     </td>
